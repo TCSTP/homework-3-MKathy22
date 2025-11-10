@@ -22,11 +22,14 @@ class MainActivity : ComponentActivity() {
      * ## Tasks:
      * - Put here the composable function that should be the main entry point of your app.
      */
-    override fun onCreate(savedInstanceState: Bundle?) {
+   override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             AppTheme {
-
+                ShopScreen( //displays Shop - called from here
+                    shop = MockData.ExampleShop,
+                    availableDiscounts = MockData.ExampleDiscounts
+                )
             }
         }
     }

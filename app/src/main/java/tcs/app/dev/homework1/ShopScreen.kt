@@ -1,5 +1,8 @@
 package tcs.app.dev.homework1
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -8,7 +11,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import tcs.app.dev.homework1.data.Cart
 import tcs.app.dev.homework1.data.Discount
+import tcs.app.dev.homework1.data.DiscountsTab
 import tcs.app.dev.homework1.data.Shop
+import tcs.app.dev.homework1.data.ShopTab
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.unit.dp
+import tcs.app.dev.homework1.data.CartTab
+import tcs.app.dev.homework1.data.minus
+import tcs.app.dev.homework1.data.plus
+import tcs.app.dev.homework1.data.update
 
 /**
  * # Homework 3 — Shop App
@@ -92,12 +105,108 @@ import tcs.app.dev.homework1.data.Shop
  * - [Pager](https://developer.android.com/develop/ui/compose/layouts/pager)
  *
  */
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShopScreen(
-    shop: Shop,
-    availableDiscounts: List<Discount>,
-    modifier: Modifier = Modifier
+    shop: Shop, //shop with item data + prices
+    availableDiscounts: List<Discount>, //list of discount options
+    modifier: Modifier = Modifier //layout
 ) {
-    var cart by rememberSaveable { mutableStateOf(Cart(shop = shop)) }
+    var selectedTab by rememberSaveable { mutableStateOf(0) } // what tab is currently selected: 0 = Shop, 1 = Discounts, 2 = Cart
+    var cart by rememberSaveable { mutableStateOf(Cart(shop = shop)) } //current cart state (items + discounts)
 
+    Scaffold( //overall structure
+        topBar = {
+            // Top Nav Bar
+            TopAppBar( //shows title + evtl. cart icon
+                title = {
+                    when (selectedTab) {
+                        0 -> Text("Shop")
+                        1 -> Text("Discounts")
+                        2 -> Text("Cart")
+                    }
+                },
+                actions = {
+                    if (selectedTab != 2) { //cart icon, except if selected tab is cart (2)
+                        IconButton(
+                            onClick = { selectedTab = 2 }, //navigate to cart tab (2)
+                            enabled = cart.itemCount > 0u //cart empty - icon disabled
+                        ) {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = "Shopping Cart") //accessibility description - not necessary, like HTML alt)
+                        }
+                    }
+                }
+            )
+        },
+        //Bottom Nav Bar - switching between shop and discounts
+        bottomBar = {
+            if (selectedTab != 2) { //only shown, if not already cart tab
+                NavigationBar {
+                    NavigationBarItem( //SHop Tab
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        icon = { Text("🛍️") },
+                        label = { Text("Shop") }
+                    )
+                    NavigationBarItem( //Discount Tab
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        icon = { Text("💸") },
+                        label = { Text("Discounts") }
+                    )
+                }
+            } else { // already in  / selected cart tab
+                BottomAppBar {
+                    //left: total price
+                    Text(
+                        text = "Total: ${cart.price}",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier
+                            .weight(1f) //leftover space
+                            .padding(start = 16.dp)
+                    )
+                    //right: pay button
+                    Button(
+                        onClick = { //checkout/leave
+                            cart = Cart(shop = shop) // clear cart
+                            selectedTab = 0 //back to shop tab
+                        },
+                        enabled = cart.itemCount > 0u, //only active if cart is not empty
+                        modifier = Modifier.padding(end = 16.dp)
+                    ) {
+                        Text("Pay")
+                    }
+                }
+            }
+        },
+        modifier = modifier
+    ) { paddingValues -> //ensures the content isn't hidden under bars
+        when (selectedTab) {
+            //Tab 0/Shop: list of addible products
+            0 -> ShopTab(
+                cart = cart, //current cart
+                onAddToCart = { item -> cart = cart + item }, //add item to cart
+                modifier = Modifier.padding(paddingValues)
+            )
+            //Tab 1/discounts: shows all available discounts
+            1 -> DiscountsTab(
+                discounts = availableDiscounts, //discount list
+                cart = cart, //current cart
+                onAddDiscount = { discount -> cart = cart + discount }, //add discount to cart
+                modifier = Modifier.padding(paddingValues)
+            )
+            // Tab 2/Cart: content, used discounts,total price
+            2 -> CartTab(
+                cart = cart, // current cart
+                onUpdateItem = { item, amount -> cart = cart.update(item to amount) }, //update item amount
+                onRemoveDiscount = { discount -> cart = cart - discount }, //remove a discount
+                onPay = { // Same as Pay button in BottomAppBar — resets cart and returns to Shop
+                    cart = Cart(shop = shop)
+                    selectedTab = 0
+                },
+                modifier = Modifier.padding(paddingValues)
+            )
+        }
+    }
 }
